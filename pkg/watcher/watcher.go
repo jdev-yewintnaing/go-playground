@@ -78,3 +78,23 @@ func Watch(ctx context.Context, urls []string, checker StatusChecker) []CheckRes
 
 	return results
 }
+
+type RetryMiddleware struct {
+	next    StatusChecker
+	retries int
+}
+
+func (l RetryMiddleware) Check(ctx context.Context, url string) CheckResult {
+	var lastResult CheckResult
+	for i := 0; i < l.retries; i++ {
+		lastResult = l.next.Check(ctx, url)
+
+		if lastResult.Err == nil {
+			return lastResult
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return lastResult
+}
